@@ -4,7 +4,8 @@ import java.util.Arrays;
 AudioContext ac;
 PowerSpectrum ps;
 
-final String TITLE = "Ramadan Plenum - Eid";
+final String DIRTITLE = "30RamEid";
+final String TITLE = "Ramadan Plenum #Eid";
 final String DATE  = "24. Mai 2020";
 double VIDEO_LENGHT = -1; // add a second
 
@@ -15,7 +16,8 @@ int waitStep;
 PImage bgImage;
 long startTime;
 
-boolean DEBUG = true;
+boolean DEBUG = false;
+boolean VERBOSE = false;
 
 void setup()
 {
@@ -24,8 +26,7 @@ void setup()
   bgImage = loadImage("backgroundImage.png");
   background(bgImage);
   noCursor();
-  frameRate(60);
-  waitStep = 0;
+  frameRate(5);
 
   // AUDIO
   ac = new AudioContext();
@@ -36,6 +37,9 @@ void fileSelected(File selection) {
   String audioFileName = selection.getAbsolutePath();
   Sample sample = SampleManager.sample(audioFileName);
   SamplePlayer player = new SamplePlayer(ac, sample);
+  if (DEBUG) {
+    println("Audi file has sample rate: ", player.getSampleRate());
+  }
   Gain g = new Gain(ac, 2, 0.2);
   g.addInput(player);
   ac.out.addInput(g);
@@ -58,34 +62,31 @@ void fileSelected(File selection) {
 
 void draw()
 { 
-  //image(img, WIDTH*2/3, HEIGHT/2);
-  waitStep++;
-  if(waitStep < 0){
-    return;
-  }
-  if (!DEBUG) {
+  if (!DEBUG && VERBOSE) {
     println("Rendering läuft noch ", (VIDEO_LENGHT - (System.currentTimeMillis() - startTime))/1000, " s");
   }
-  waitStep = 0;
   drawBackground();
-  if(ps == null) return;
-  double highest = 0;
-  int sum = 0;
+  if(ps == null) {
+    saveFrame("export/"+DIRTITLE+"/Video_######.png");
+    return;
+  }
+  double sum = 0;
   double avg = 0;
   float[] features = ps.getFeatures();
   if (features != null) {
-    highest = features[0];
     for (int i = 0; i < features.length; i++) {
       //println("features[",i,"]: ", features[i]);
       sum += features[i];
-      if (highest < features[i]){
-        highest = features[i];
-      }
     }
     if (features.length > 0)
       avg = sum / features.length;
     else
       avg = 0;
+    if (DEBUG) {
+      println("features.length: ", features.length);
+      println("sum: ", sum);
+      println("avg: ", avg);
+    }
   }
   int level = getLevel(avg);
   
@@ -107,28 +108,26 @@ void draw()
     end = PI + PI/6;
     arc(x, y, boxW, boxH, start, end);
   }
-  if (DEBUG) {
-    textSize(10);
-    text("level: " + level, 10, 10);
-    text("highest: " + highest, 10, 20);
-    println("highest: ", highest);
-    println("level: ", level);
-  }
-  saveFrame("export/Video_######.png");
+
+  saveFrame("export/"+DIRTITLE+"/Video_######.png");
   if((System.currentTimeMillis() - startTime) > VIDEO_LENGHT) {
     println("fertig!");
     exit();
   }
 }
 
-int getLevel(double highest) {
-    int MAXVALUE = 8;
-    if (highest > MAXVALUE) {
+int getLevel(double avg) {
+    double MAXVALUE = 8;
+    if (avg > MAXVALUE) {
       return MAXBARS;
     }
     
-    double percent = highest / MAXVALUE;
+    double percent = avg / MAXVALUE;
     double numberBars = MAXBARS * percent;
+    if (DEBUG) {
+      println("percent: ", percent);
+      println("level: ", numberBars);
+    }
     return (int) numberBars;
 }
 
@@ -139,9 +138,9 @@ void drawBackground() {
   textFont(myFont, 88);
   fill(0, 102, 155);
   //textAlign(CENTER, CENTER);
-  text(TITLE, WIDTH/7, 120);
+  text(TITLE, WIDTH/10, 120);
   textSize(32);
-  text(DATE, WIDTH/7, 160);
+  text(DATE, WIDTH/10, 160);
 }
 
 /**
